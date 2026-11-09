@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -72,7 +73,7 @@ fun ProfileScreen(vm: AppViewModel) {
                 trailingIcon = { if (name != u.name && name.isNotBlank()) IconButton({ vm.saveProfile(name, u.handle) }) { Icon(Icons.Default.Check, "Save", tint = NovaTeal) } })
             Text("@${u.handle}", color = SubtleText, fontSize = 14.sp)
         }
-        Section(Icons.Default.Notes, "Bio") {
+        Section(Icons.AutoMirrored.Filled.Notes, "Bio") {
             OutlinedTextField(bio, { bio = it.take(300) }, modifier = Modifier.fillMaxWidth(), placeholder = { Text("Enter your bio here…") }, minLines = 2)
             if (bio != u.bio) PillButton("Save bio", { vm.saveProfile(u.name, u.handle, bio) }, Modifier.padding(top = 8.dp))
         }
@@ -239,13 +240,26 @@ fun SettingsScreen(vm: AppViewModel) {
         Item("Hide Location", "You will not appear in Nearby rooms", onClick = { vm.setFlags(f.copy(hideLocation = !f.hideLocation)) }) {
             Checkbox(f.hideLocation, { vm.setFlags(f.copy(hideLocation = it)) }, colors = CheckboxDefaults.colors(checkedColor = Color.White, checkmarkColor = Color.Black))
         }
+        Item("Hide Online Status", "Friends and others will not see when you are online", onClick = { vm.setFlags(f.copy(hidePresence = !f.hidePresence)) }) {
+            Checkbox(f.hidePresence, { vm.setFlags(f.copy(hidePresence = it)) }, colors = CheckboxDefaults.colors(checkedColor = Color.White, checkmarkColor = Color.Black))
+        }
+        Item("Keep My Activity Private", "Only you can see your Top, History and Liked videos", onClick = { vm.setFlags(f.copy(privateActivity = !f.privateActivity)) }) {
+            Checkbox(f.privateActivity, { vm.setFlags(f.copy(privateActivity = it)) }, colors = CheckboxDefaults.colors(checkedColor = Color.White, checkmarkColor = Color.Black))
+        }
+        Item("Invitation Notifications", "Notify me when someone invites me to a room", onClick = { vm.setFlags(f.copy(notifyInvites = !f.notifyInvites)) }) {
+            Checkbox(f.notifyInvites, { vm.setFlags(f.copy(notifyInvites = it)) }, colors = CheckboxDefaults.colors(checkedColor = Color.White, checkmarkColor = Color.Black))
+        }
+        Item("Friend Notifications", "Notify me about friend requests", onClick = { vm.setFlags(f.copy(notifyFriends = !f.notifyFriends)) }) {
+            Checkbox(f.notifyFriends, { vm.setFlags(f.copy(notifyFriends = it)) }, colors = CheckboxDefaults.colors(checkedColor = Color.White, checkmarkColor = Color.Black))
+        }
+        Item("Sign out of other devices", "Ends every other session of this account", onClick = { vm.signOutOtherDevices() }) {}
         Item("Privacy", "Privacy policy", onClick = { open("/privacy") }) { Icon(Icons.Default.ChevronRight, null, tint = Color.White) }
         Item("Terms of Service", "Your rights and obligations", onClick = { open("/terms") }) { Icon(Icons.Default.ChevronRight, null, tint = Color.White) }
         Item("Blocked users", "People you blocked can't chat with you or send requests", onClick = { blockedDialog = true }) { Icon(Icons.Default.ChevronRight, null, tint = Color.White) }
         Header("Feedback")
         Item("Review Nova", "If you enjoy using Nova, please take a moment to review it", onClick = {
             try { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=${ctx.packageName}"))) }
-            catch (e: Exception) { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=${ctx.packageName}"))) }
+            catch (_: Exception) { ctx.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=${ctx.packageName}"))) }
         }) {}
         Item("Share Nova", "Tell your friends", onClick = {
             ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "Watch videos together with me on Nova Watch Party! https://play.google.com/store/apps/details?id=${ctx.packageName}") }, "Share"))

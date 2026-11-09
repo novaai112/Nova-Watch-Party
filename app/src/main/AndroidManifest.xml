@@ -46,6 +46,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="novaparty" android:host="room" />
             </intent-filter>
+            <!-- verified App Link: https://<inviteHost>/r/CODE (server serves /.well-known/assetlinks.json, env ANDROID_SHA256) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="${inviteHost}" android:pathPrefix="/r/" />
+            </intent-filter>
         </activity>
     </application>
 </manifest>

@@ -44,10 +44,10 @@ class YtBridge(
     private val onError: (String) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
-    @JavascriptInterface fun ready() { main.post { onReady() } }
-    @JavascriptInterface fun state(code: Int) { main.post { onState(code) } }
-    @JavascriptInterface fun time(sec: Double, dur: Double, state: Int) { main.post { onTime(sec, dur, state) } }
-    @JavascriptInterface fun error(code: String) { main.post { onError(code) } }
+    @JavascriptInterface @Suppress("unused") fun ready() { main.post { onReady() } }
+    @JavascriptInterface @Suppress("unused") fun state(code: Int) { main.post { onState(code) } }
+    @JavascriptInterface @Suppress("unused") fun time(sec: Double, dur: Double, state: Int) { main.post { onTime(sec, dur, state) } }
+    @JavascriptInterface @Suppress("unused") fun error(code: String) { main.post { onError(code) } }
 }
 
 /**
@@ -150,7 +150,8 @@ fun YouTubeSync(
         if (videoId != loadedId) {
             loadedId = videoId; started = false
             curSec = room.position.toFloat()
-            w.evaluateJavascript("nova.load('${videoId.replace("'", "")}', ${room.position}, ${room.playing})", null)
+            val safeId = videoId.replace("\\", "\\\\").replace("'", "\\'")
+            w.evaluateJavascript("nova.load('$safeId', ${room.position}, ${room.playing})", null)
         } else if (!hostNow) {
             w.evaluateJavascript(if (room.playing) "nova.play()" else "nova.pause()", null)
             if (abs(curSec - room.position) > 2.0) w.evaluateJavascript("nova.seek(${room.position})", null)

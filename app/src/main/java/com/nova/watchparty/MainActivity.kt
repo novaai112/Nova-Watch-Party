@@ -2,7 +2,6 @@ package com.nova.watchparty
 
 import android.app.PictureInPictureParams
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import android.widget.Toast
@@ -27,7 +26,7 @@ class MainActivity : ComponentActivity() {
                 val ctx = LocalContext.current
                 LaunchedEffect(Unit) { vm.toasts.collect { Toast.makeText(ctx, it, Toast.LENGTH_SHORT).show() } }
                 val screen = vm.screen
-                BackHandler(enabled = screen !is Screen.Splash && screen !is Screen.Home) { vm.back() }
+                BackHandler(enabled = (screen !is Screen.Splash) && (screen !is Screen.Home)) { vm.back() }
                 NovaNav(vm, screen)
             }
         }
@@ -39,11 +38,13 @@ class MainActivity : ComponentActivity() {
         i?.getStringExtra("code")?.let { vm.handleDeepLink(it); return }
         val d = i?.data ?: return
         if (d.scheme == "novaparty" && d.host == "room") vm.handleDeepLink(d.pathSegments.firstOrNull())
+        else if (d.scheme == "https" && d.pathSegments.size >= 2 && d.pathSegments[0] == "r") vm.handleDeepLink(d.pathSegments[1])
     }
 
     override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
         val f = vm.user?.flags?.floatingPlayer == true
-        if (f && vm.room.value != null && Build.VERSION.SDK_INT >= 26) {
+        if (f && vm.room.value != null) {
             enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build())
         }
     }

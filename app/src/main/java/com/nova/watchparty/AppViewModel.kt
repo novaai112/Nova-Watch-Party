@@ -57,6 +57,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var roomsLoaded by mutableStateOf(false)
     var micOn by mutableStateOf(false)
     var pendingRequests by mutableIntStateOf(0)
+    /** Set when a room asked for a passcode; the Home screen shows the prompt. */
+    var passcodeFor by mutableStateOf<String?>(null)
+    private var lastJoin = ""
     private var voice: VoiceChat? = null
     var pendingJoin: String? = null
     var pendingQueue: List<Pick> = emptyList()
@@ -101,6 +104,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
         viewModelScope.launch { client.errors.collect { toasts.emit(it) } }
+        viewModelScope.launch { client.passcodeRequired.collect { if (lastJoin.isNotBlank()) passcodeFor = lastJoin } }
         // voice: keep WebRTC connections in step with the member list, and route signaling
         viewModelScope.launch {
             room.collect { r ->
@@ -177,7 +181,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 Backend.updateMe(JSONObject().put("flags", JSONObject().put("quickReaction", f.quickReaction)
                     .put("restrictInvites", f.restrictInvites).put("hideMature", f.hideMature).put("floatingPlayer", f.floatingPlayer)
-                    .put("autoTranslate", f.autoTranslate).put("hideLocation", f.hideLocation)))
+                    .put("autoTranslate", f.autoTranslate).put("hideLocation", f.hideLocation)
+                    .put("hidePresence", f.hidePresence).put("privateActivity", f.privateActivity).put("notifyInvites", f.notifyInvites).put("notifyFriends", f.notifyFriends)))
             } catch (e: ApiError) { toasts.emit(e.message ?: "Could not save") }
         }
     }
@@ -251,7 +256,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     // ---- rooms
     fun refreshRooms(q: String) {
         viewModelScope.launch {
-            try { rooms = Backend.publicRooms(q); roomsLoaded = true } catch (e: ApiError) { roomsLoaded = true }
+            try { rooms = Backend.publicRooms(q); roomsLoaded = true } catch (_: ApiError) { roomsLoaded = true }
         }
     }
     private fun hello(type: String) = JSONObject().put("type", type).put("token", Backend.token)
@@ -270,7 +275,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             usable?.let { addHistory(it) }
         }
     }
-    fun joinRoom(code: String) = client.open(server, hello("join").put("code", code.trim().uppercase()))
+    fun joinRoom(code: String, passcode: String? = null) {
+        lastJoin = code.trim().uppercase()
+        client.open(server, hello("join").put("code", lastJoin).apply { if (!passcode.isNullOrBlank()) put("passcode", passcode) })
+    }
+    fun signOutOtherDevices() { viewModelScope.launch { try { val n = Backend.logoutOthers(); toasts.emit(if (n > 0) "Signed out of $n other device(s)" else "No other devices are signed in") } catch (e: ApiError) { toasts.emit(e.message ?: "Failed") } } }
     fun leave() { stopVoice(); client.close() }
     fun consumePendingJoin() { pendingJoin?.let { pendingJoin = null; joinRoom(it) } }
     fun handleDeepLink(code: String?) {

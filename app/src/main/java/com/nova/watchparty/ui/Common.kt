@@ -5,12 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -43,7 +45,8 @@ private val BLOBS = listOf(
 @Composable
 fun NovaBackground(modifier: Modifier = Modifier, dim: Float = 0f, content: @Composable BoxScope.() -> Unit) {
     val t by rememberInfiniteTransition(label = "bg").animateFloat(
-        0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(40000, easing = LinearEasing)), label = "t")
+        0f, (2 * Math.PI).toFloat(), infiniteRepeatable(tween(40000, easing = LinearEasing)), label = "t"
+    )
     Box(modifier.fillMaxSize().background(NovaBase)) {
         Canvas(Modifier.fillMaxSize()) {
             BLOBS.forEach { b ->
@@ -78,17 +81,24 @@ fun NovaLogo(height: Dp = 32.dp, modifier: Modifier = Modifier) {
 }
 
 fun Modifier.glass(shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(14.dp), alpha: Float = 0.10f) =
-    this.clip(shape).background(Color.White.copy(alpha = alpha), shape)
+    this.clip(shape)
+        .background(Color.White.copy(alpha = alpha), shape)
+        .border(1.dp, Color.White.copy(alpha = (alpha * 1.5f).coerceAtMost(0.35f)), shape)
 
 private val AVATAR_COLORS = listOf(Color(0xFFEF4444), Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFEC4899), Color(0xFF14B8A6))
 
 @Composable
 fun Avatar(url: String, name: String, size: Dp, modifier: Modifier = Modifier) {
-    val m = modifier.size(size).clip(CircleShape)
+    val shape = CircleShape
+    val m = modifier
+        .size(size)
+        .clip(shape)
+        .border(1.dp, Color.White.copy(alpha = 0.25f), shape)
     if (url.isNotBlank()) {
         AsyncImage(Backend.absolute(url), name, m, contentScale = ContentScale.Crop)
     } else {
-        Box(m.background(AVATAR_COLORS[(name.hashCode().and(0x7fffffff)) % AVATAR_COLORS.size]), Alignment.Center) {
+        val colorIndex = remember(name) { (name.hashCode().and(0x7fffffff)) % AVATAR_COLORS.size }
+        Box(m.background(AVATAR_COLORS[colorIndex]), Alignment.Center) {
             Text(name.firstOrNull()?.uppercase() ?: "?", color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.45f).sp)
         }
     }
@@ -97,7 +107,7 @@ fun Avatar(url: String, name: String, size: Dp, modifier: Modifier = Modifier) {
 @Composable
 fun TopBarBack(onBack: () -> Unit, modifier: Modifier = Modifier, title: @Composable () -> Unit = {}, trailing: @Composable RowScope.() -> Unit = {}) {
     Row(modifier.fillMaxWidth().statusBarsPadding().height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.Default.ArrowBack, "Back", tint = Color.White) }
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
         Box(Modifier.weight(1f), Alignment.Center) { title() }
         Row(Modifier.widthIn(min = 48.dp), horizontalArrangement = Arrangement.End, content = trailing)
     }
@@ -105,11 +115,23 @@ fun TopBarBack(onBack: () -> Unit, modifier: Modifier = Modifier, title: @Compos
 
 @Composable
 fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
+    val shape = RoundedCornerShape(50)
     Box(
-        modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = if (enabled) 0.55f else 0.25f))
-            .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 22.dp, vertical = 9.dp),
+        modifier
+            .clip(shape)
+            .background(
+                if (enabled) Brush.horizontalGradient(listOf(Color(0xFF2A2550), Color(0xFF1C1838)))
+                else Brush.horizontalGradient(listOf(Color.Black.copy(alpha = 0.25f), Color.Black.copy(alpha = 0.25f)))
+            )
+            .border(
+                1.dp,
+                if (enabled) Color.White.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f),
+                shape
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 22.dp, vertical = 10.dp),
         Alignment.Center,
-    ) { Text(text, color = Color.White.copy(alpha = if (enabled) 1f else 0.5f), fontSize = 15.sp) }
+    ) { Text(text, color = Color.White.copy(alpha = if (enabled) 1f else 0.4f), fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp) }
 }
 
 @Composable

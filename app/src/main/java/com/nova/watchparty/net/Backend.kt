@@ -110,5 +110,20 @@ object Backend {
         val o = call("GET", "/yt/check?id=" + java.net.URLEncoder.encode(id, "UTF-8"), auth = false)
         o.optBoolean("embeddable", true) to o.optString("reason")
     } catch (e: ApiError) { true to "" }
+    suspend fun profileDetail(handle: String): ProfileDetail {
+        val o = call("GET", "/users/lookup?handle=" + java.net.URLEncoder.encode(handle, "UTF-8"))
+        val st = o.optJSONObject("stats") ?: JSONObject()
+        val prov = st.optJSONObject("providers")?.let { po -> po.keys().asSequence().associateWith { k -> po.optInt(k) } } ?: emptyMap()
+        return ProfileDetail(o.toFriend(), o.optJSONObject("presence")?.let { Presence(it.optBoolean("online"), it.optLong("lastActive")) }, o.optString("relation", "none"),
+            ProfileStats(st.optLong("joined"), st.optInt("minutes"), st.optInt("rooms"), st.optInt("videos"), st.optInt("likes"), prov))
+    }
+    /** tab = top | history | liked. Returns (hiddenByPrivacy, items). */
+    suspend fun userVideos(handle: String, tab: String): Pair<Boolean, List<VideoItem>> {
+        val o = call("GET", "/users/videos?tab=$tab&handle=" + java.net.URLEncoder.encode(handle, "UTF-8"))
+        return o.optBoolean("hidden") to o.optJSONArray("items").mapObjects { VideoItem(it.getString("url"), it.optString("title"), it.optString("thumb"), it.optInt("views", 1)) }
+    }
+    suspend fun searchUsers(q: String): List<Pair<Friend, String>> =
+        call("GET", "/users/search?q=" + java.net.URLEncoder.encode(q, "UTF-8")).optJSONArray("users").mapObjects { it.toFriend() to it.optString("relation", "none") }
+    suspend fun logoutOthers(): Int = call("POST", "/auth/logout-others", jb(JSONObject())).optInt("signedOut")
     suspend fun removeFriend(id: String) { call("POST", "/friends/remove", jb(JSONObject().put("id", id))) }
 }

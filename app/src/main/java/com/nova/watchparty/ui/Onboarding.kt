@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.nova.watchparty.ui
 
 import android.app.Activity
@@ -185,7 +185,7 @@ fun SignInScreen(vm: AppViewModel) {
                         val c = res.credential
                         if (c is CustomCredential && c.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL)
                             vm.googleSignIn(GoogleIdTokenCredential.createFrom(c.data).idToken)
-                    } catch (e: Exception) { vm.toasts.tryEmit("Google sign-in was cancelled or failed") }
+                    } catch (_: Exception) { vm.toasts.tryEmit("Google sign-in was cancelled or failed") }
                 }
             }) { Text("G", color = Color(0xFF4285F4), fontWeight = FontWeight.Black, fontSize = 22.sp) }
             RoundSocial({ vm.go(Screen.EmailEntry) }) { Icon(Icons.Default.Email, "Email", tint = Color.Black) }

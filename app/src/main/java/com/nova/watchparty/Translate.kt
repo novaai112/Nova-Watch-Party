@@ -25,6 +25,6 @@ object ChatTranslator {
             }
             tr.downloadModelIfNeeded().await()
             tr.translate(text).await().takeIf { it.isNotBlank() && it != text }
-        } catch (e: Exception) { null }
+        } catch (_: Exception) { null }
     }
 }

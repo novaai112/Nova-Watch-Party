@@ -49,6 +49,13 @@ import kotlinx.coroutines.delay
 fun HomeScreen(vm: AppViewModel) {
     var query by remember { mutableStateOf("") }
     var joinDialog by remember { mutableStateOf(false) }
+    var people by remember { mutableStateOf<List<Pair<com.nova.watchparty.Friend, String>>>(emptyList()) }
+    var profileFor by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(query) {
+        if (query.trim().length < 2) { people = emptyList(); return@LaunchedEffect }
+        delay(400)
+        people = try { com.nova.watchparty.net.Backend.searchUsers(query.trim()) } catch (_: com.nova.watchparty.net.ApiError) { emptyList() }
+    }
     val me = vm.user
     val ctx = LocalContext.current
     val hide = me?.flags?.hideLocation == true
@@ -73,7 +80,7 @@ fun HomeScreen(vm: AppViewModel) {
                 IconButton({ vm.go(Screen.Settings) }) { Icon(Icons.Default.Settings, "Settings", tint = Color.White) }
                 Box(Modifier.weight(1f), Alignment.Center) { NovaLogo(30.dp) }
                 IconButton({ vm.go(Screen.Friends) }) {
-                    BadgedBox({ if (vm.pendingRequests > 0) Badge(containerColor = NovaCoral) { Text("${vm.pendingRequests}") } }) { Icon(Icons.Default.Group, "Friends", tint = Color.White) }
+                    BadgedBox({ if (vm.pendingRequests > 0) Badge(containerColor = NovaCoral) { Text(vm.pendingRequests.toString()) } }) { Icon(Icons.Default.Group, "Friends", tint = Color.White) }
                 }
             }
             // search bar
@@ -84,36 +91,64 @@ fun HomeScreen(vm: AppViewModel) {
                 BasicTextField(query, { query = it }, singleLine = true, modifier = Modifier.weight(1f),
                     textStyle = TextStyle(color = Color.White, fontSize = 16.sp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.refreshRooms(query) }),
-                    decorationBox = { inner -> if (query.isEmpty()) Text("Search", color = Color.White.copy(0.55f), fontSize = 16.sp); inner() })
+                    decorationBox = { inner -> if (query.isEmpty()) Text("Search rooms…", color = Color.White.copy(0.55f), fontSize = 16.sp); inner() })
                 if (query.isNotEmpty()) Icon(Icons.Default.Close, "Clear", tint = Color.White, modifier = Modifier.clickable { query = "" })
             }
             // join-by-code strip
-            Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).background(Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(0.12f), Color.Transparent)))
-                .clickable { joinDialog = true }.padding(vertical = 10.dp), Alignment.Center) {
-                Text("ENTER A ROOM CODE", fontStyle = FontStyle.Italic, fontWeight = FontWeight.Black, fontSize = 20.sp, color = Color.White)
+            Box(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp).glass(RoundedCornerShape(14.dp), 0.12f)
+                .clickable { joinDialog = true }.padding(vertical = 12.dp), Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.VpnKey, null, tint = NovaGold, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("ENTER A ROOM CODE", fontStyle = FontStyle.Italic, fontWeight = FontWeight.Black, fontSize = 15.sp, color = Color.White)
+                }
+            }
+            if (people.isNotEmpty()) {
+                Text("People", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                people.take(5).forEach { (f, rel) ->
+                    Row(Modifier.fillMaxWidth().clickable { profileFor = f.handle }.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Avatar(f.avatar, f.name, 40.dp); Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) { Text(f.name, color = Color.White, fontSize = 14.sp, maxLines = 1); Text("@${f.handle}", color = SubtleText, fontSize = 12.sp, maxLines = 1) }
+                        if (rel == "friends") Icon(Icons.Default.Check, "Friend", tint = NovaTeal)
+                    }
+                }
             }
             Row(Modifier.padding(horizontal = 16.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Public, null, tint = Color.White, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(10.dp))
-                Text("Public", color = Color.White, fontSize = 16.sp)
+                Icon(Icons.Default.Public, null, tint = Color.White, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp))
+                Text("Public Rooms", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
             if (vm.rooms.isEmpty()) {
                 Column(Modifier.fillMaxSize().padding(bottom = 80.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                     if (!vm.roomsLoaded) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
                     else {
-                        Icon(Icons.Default.SentimentDissatisfied, null, tint = Color.White.copy(0.8f), modifier = Modifier.size(84.dp))
+                        Icon(Icons.Default.SentimentDissatisfied, null, tint = Color.White.copy(0.8f), modifier = Modifier.size(72.dp))
+                        Spacer(Modifier.height(8.dp))
                         Text(if (query.isBlank()) "No public rooms right now. Start one!" else "No rooms match \"$query\"", color = Color.White.copy(0.85f), fontSize = 14.sp)
                     }
                 }
-            } else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)) {
+            } else LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(vm.rooms, key = { it.code }) { r -> RoomRow(r) { vm.joinRoom(r.code) } }
             }
         }
         // FAB
-        Box(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp).size(58.dp).clip(CircleShape).background(Color.White)
-            .clickable { vm.go(Screen.Sources(SourceMode.Start)) }, Alignment.Center) { Icon(Icons.Default.Add, "New room", tint = Color.Black, modifier = Modifier.size(32.dp)) }
+        Box(
+            Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(20.dp).size(56.dp).clip(CircleShape)
+                .background(Brush.linearGradient(listOf(NovaViolet, NovaCoral)))
+                .clickable { vm.go(Screen.Sources(SourceMode.Start)) },
+            Alignment.Center
+        ) { Icon(Icons.Default.Add, "New room", tint = Color.White, modifier = Modifier.size(32.dp)) }
         if (vm.connecting.collectAsState().value) Box(Modifier.fillMaxSize().background(Color.Black.copy(0.5f)), Alignment.Center) { CircularProgressIndicator(color = Color.White) }
     }
 
+    profileFor?.let { h -> UserSheet(vm, h) { profileFor = null } }
+    vm.passcodeFor?.let { code ->
+        var pc by remember(code) { mutableStateOf("") }
+        AlertDialog(onDismissRequest = { vm.passcodeFor = null }, containerColor = Color(0xFF1C1838),
+            title = { Text("Passcode needed", color = Color.White) },
+            text = { OutlinedTextField(pc, { pc = it.take(12) }, singleLine = true, label = { Text("Passcode") }) },
+            confirmButton = { TextButton({ vm.passcodeFor = null; vm.joinRoom(code, pc) }, enabled = pc.length >= 4) { Text("Join") } },
+            dismissButton = { TextButton({ vm.passcodeFor = null }) { Text("Cancel") } })
+    }
     if (joinDialog) {
         var code by remember { mutableStateOf("") }
         AlertDialog(onDismissRequest = { joinDialog = false }, containerColor = Color(0xFF1C1838),
@@ -126,19 +161,43 @@ fun HomeScreen(vm: AppViewModel) {
 
 @Composable
 private fun RoomRow(r: RoomCard, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 4.dp).height(74.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(132.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color.Black.copy(0.4f))) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .glass(RoundedCornerShape(14.dp), 0.10f)
+            .clickable(onClick = onClick)
+            .padding(8.dp)
+            .height(72.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier
+                .width(120.dp)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(0.4f))
+        ) {
             if (r.thumb.isNotBlank()) AsyncImage(r.thumb, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Icon(Icons.Default.PlayCircle, null, tint = Color.White.copy(0.85f), modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).size(16.dp))
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(0.6f)),
+                Alignment.Center
+            ) {
+                Icon(Icons.Default.PlayArrow, null, tint = Color.White, modifier = Modifier.size(12.dp))
+            }
         }
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(r.title, color = Color.White, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 16.sp)
+            Text(r.title.ifBlank { "Live Nova Room" }, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 16.sp)
             Spacer(Modifier.height(6.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                r.members.take(5).forEach { Avatar(it.avatar, it.name, 26.dp, Modifier.padding(end = 3.dp)) }
-                if (r.count > 5) Box(Modifier.clip(RoundedCornerShape(50)).background(NovaCoral).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                    Text("+${r.count - 5}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                r.members.take(4).forEach { Avatar(it.avatar, it.name, 24.dp, Modifier.padding(end = 4.dp)) }
+                if (r.count > 4) Box(Modifier.clip(RoundedCornerShape(50)).background(NovaCoral).padding(horizontal = 6.dp, vertical = 1.dp)) {
+                    Text("+${r.count - 4}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

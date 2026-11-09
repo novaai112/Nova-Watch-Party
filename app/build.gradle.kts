@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.net.URI
 
 plugins {
     id("com.android.application")
@@ -12,6 +13,8 @@ val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
     if (f.exists()) f.inputStream().use { load(it) }
 }
+// Host used for verified Android App Links (https://<host>/r/CODE): INVITE_BASE_URL, else the server URL
+fun hostOf(url: String): String = try { URI(url.replaceFirst("ws", "http")).host ?: "" } catch (e: Exception) { "" }
 fun secret(name: String): String = (localProps.getProperty(name) ?: System.getenv(name) ?: "").trim()
 
 android {
@@ -21,9 +24,10 @@ android {
         applicationId = "com.nova.watchparty"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "2.1"
+        versionCode = 5
+        versionName = "2.3"
         manifestPlaceholders["cleartext"] = "true"
+        manifestPlaceholders["inviteHost"] = hostOf(secret("INVITE_BASE_URL").ifBlank { secret("SERVER_URL") }).ifBlank { "localhost" }
         buildConfigField("String", "YOUTUBE_API_KEY", "\"${secret("YOUTUBE_API_KEY")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${secret("TMDB_API_KEY")}\"")
         buildConfigField("String", "GIPHY_API_KEY", "\"${secret("GIPHY_API_KEY")}\"")

@@ -30,10 +30,10 @@ class VoiceChat(ctx: Context, private val signal: (to: String, data: JSONObject)
     }
 
     private open class Sdp : SdpObserver {
-        override fun onCreateSuccess(d: SessionDescription) {}
+        override fun onCreateSuccess(sdp: SessionDescription?) {}
         override fun onSetSuccess() {}
-        override fun onCreateFailure(e: String?) {}
-        override fun onSetFailure(e: String?) {}
+        override fun onCreateFailure(error: String?) {}
+        override fun onSetFailure(error: String?) {}
     }
 
     // Each member pair can have two connections: "out:<id>" (I speak to them) and "in:<id>" (they speak to me).
@@ -61,7 +61,8 @@ class VoiceChat(ctx: Context, private val signal: (to: String, data: JSONObject)
         val pc = newPeer("out:$id", id, "o") ?: return
         track?.let { pc.addTrack(it, listOf("nova")) }
         pc.createOffer(object : Sdp() {
-            override fun onCreateSuccess(d: SessionDescription) {
+            override fun onCreateSuccess(sdp: SessionDescription?) {
+                val d = sdp ?: return
                 pc.setLocalDescription(Sdp(), d); signal(id, JSONObject().put("t", "offer").put("d", "o").put("sdp", d.description))
             }
         }, MediaConstraints())
@@ -80,7 +81,8 @@ class VoiceChat(ctx: Context, private val signal: (to: String, data: JSONObject)
                     override fun onSetSuccess() {
                         remoteSet.add(key); flush(key)
                         pc.createAnswer(object : Sdp() {
-                            override fun onCreateSuccess(a: SessionDescription) {
+                            override fun onCreateSuccess(sdp: SessionDescription?) {
+                                val a = sdp ?: return
                                 pc.setLocalDescription(Sdp(), a); signal(from, JSONObject().put("t", "answer").put("d", "i").put("sdp", a.description))
                             }
                         }, MediaConstraints())

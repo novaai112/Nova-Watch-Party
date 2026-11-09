@@ -15,6 +15,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -93,7 +94,7 @@ fun SourcesScreen(vm: AppViewModel, mode: SourceMode) {
             Kind.Karaoke -> VideoSearch(initial = "karaoke", live = false, prefix = "karaoke ", onPick = pick)
             Kind.Playlists -> PlaylistSearch(onPickAll = ::finish)
             Kind.Trailers -> TrailersPane(pick)
-            Kind.Likes, Kind.History -> SavedList(page.arg, vm, pick)
+            Kind.Likes, Kind.History -> SavedList(page.arg, pick)
             Kind.Web -> WebBrowser(page.arg, page.title, onBack = { page = Page() }, onWatch = { url, title -> pick(pickFromUrl(url, title)) })
         }
     }
@@ -114,9 +115,17 @@ private fun GridPage(onSearch: (String) -> Unit, onTile: (Page) -> Unit) {
         }
         LazyVerticalGrid(GridCells.Fixed(2), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(TILES) { t ->
-                Row(Modifier.fillMaxWidth().height(54.dp).clip(RoundedCornerShape(12.dp)).clickable { onTile(t.page) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    t.icon?.let { Icon(it, null, tint = if (t.label == "YouTube" || t.label == "LIVE") Color(0xFFFF4B4B) else Color.White, modifier = Modifier.size((t.size * 1.1f).dp)); Spacer(Modifier.width(6.dp)) }
-                    Text(t.label, color = Color.White, fontFamily = t.family, fontWeight = t.weight, fontStyle = if (t.italic) FontStyle.Italic else FontStyle.Normal, fontSize = t.size.sp)
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(54.dp)
+                        .glass(RoundedCornerShape(12.dp), 0.12f)
+                        .clickable { onTile(t.page) },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    t.icon?.let { Icon(it, null, tint = if ((t.label == "YouTube") || (t.label == "LIVE")) Color(0xFFFF4B4B) else Color.White, modifier = Modifier.size((t.size * 1.05f).dp)); Spacer(Modifier.width(6.dp)) }
+                    Text(t.label, color = Color.White, fontFamily = t.family, fontWeight = t.weight, fontStyle = if (t.italic) FontStyle.Italic else FontStyle.Normal, fontSize = (t.size * 0.9f).sp)
                 }
             }
         }
@@ -205,7 +214,7 @@ private fun PlaylistSearch(onPickAll: (List<Pick>) -> Unit) {
 }
 
 @Composable
-private fun SavedList(kind: String, vm: AppViewModel, onPick: (Pick) -> Unit) {
+private fun SavedList(kind: String, onPick: (Pick) -> Unit) {
     var state by remember { mutableStateOf<Load<List<SavedItem>>>(Load.Busy) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(kind) { state = try { Load.Ok(Backend.saved(kind)) } catch (e: ApiError) { Load.Fail(e.message ?: "Failed") } }
@@ -233,7 +242,7 @@ private fun WebBrowser(startUrl: String, title: String, onBack: () -> Unit, onWa
     BackHandler(enabled = canBack) { view?.goBack() }
     Column(Modifier.fillMaxSize()) {
         TopBarBack(onBack, title = { Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Light) }, trailing = {
-            IconButton({ view?.let { onWatch(it.url ?: startUrl, it.title ?: title) } }) { Icon(Icons.Default.OpenInNew, "Watch together", tint = Color.White) }
+            IconButton({ view?.let { onWatch(it.url ?: startUrl, it.title ?: title) } }) { Icon(Icons.AutoMirrored.Filled.OpenInNew, "Watch together", tint = Color.White) }
         })
         Text("Open the video you want, then tap the icon at the top right to watch it together.", color = SubtleText, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp))
         AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->

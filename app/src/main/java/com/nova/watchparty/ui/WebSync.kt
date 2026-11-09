@@ -12,8 +12,8 @@ import kotlinx.coroutines.delay
 
 /** JS -> Kotlin bridge. The page script reports the main <video> element's state; only the host's reports are forwarded. */
 class WebBridge(private val onReport: (Boolean, Double) -> Unit, private val onEnded: () -> Unit) {
-    @JavascriptInterface fun report(playing: Boolean, time: Double) = onReport(playing, time)
-    @JavascriptInterface fun ended() = onEnded()
+    @JavascriptInterface @Suppress("unused") fun report(playing: Boolean, time: Double) = onReport(playing, time)
+    @JavascriptInterface @Suppress("unused") fun ended() = onEnded()
 }
 
 private val INJECT = """

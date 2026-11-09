@@ -25,6 +25,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -38,6 +40,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -98,6 +102,8 @@ fun RoomScreen(vm: AppViewModel) {
     var showQueue by remember { mutableStateOf(false) }
     var showGif by remember { mutableStateOf(false) }
     var showLeave by remember { mutableStateOf(false) }
+    var menuFor by remember { mutableStateOf<String?>(null) }
+    val requests by vm.client.requests.collectAsState()
     var mentionMenu by remember { mutableStateOf(false) }
     var userSheet by remember { mutableStateOf<String?>(null) }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let { vm.sendPhoto(ctx, it); showGif = false } }
@@ -142,7 +148,7 @@ fun RoomScreen(vm: AppViewModel) {
                 Box(Modifier.weight(1f), Alignment.Center) { NovaLogo(28.dp) }
                 IconButton({ vm.go(Screen.Sources(SourceMode.Pick)) }) { Icon(Icons.Default.Search, "Pick a video", tint = Color.White) }
                 IconButton({ showMembers = !showMembers }) {
-                    BadgedBox({ Badge(containerColor = NovaCoral) { Text("${r.members.size}") } }) { Icon(Icons.Default.Group, "People", tint = Color.White) }
+                    BadgedBox({ Badge(containerColor = NovaCoral) { Text(r.members.size.toString()) } }) { Icon(Icons.Default.Group, "People", tint = Color.White) }
                 }
             }
             player(Modifier.fillMaxWidth().aspectRatio(16f / 9f))
@@ -169,7 +175,7 @@ fun RoomScreen(vm: AppViewModel) {
                 }
                 when (panel) {
                     Panel.Invite -> InvitePanel(r, link, shareText, friends, onInvite = { vm.inviteFriend(it) }, onPrivacy = { vm.client.settings(privacy = it) })
-                    Panel.Settings -> SettingsPanel(r, flags, onSettings = { p, b -> vm.client.settings(privacy = p, playback = b) }, onVoice = { vm.client.settings(voice = it) }, onTranslate = { vm.setFlags(flags.copy(autoTranslate = it)) }, onClose = { panel = Panel.None })
+                    Panel.Settings -> SettingsPanel(r, flags, onSettings = { p, b -> vm.client.settings(privacy = p, playback = b) }, onVoice = { vm.client.settings(voice = it) }, onFlags = { l, a, c, m -> vm.client.settings(locked = l, approval = a, chat = c, max = m) }, onPasscode = { vm.client.settings(passcode = it) }, onTranslate = { vm.setFlags(flags.copy(autoTranslate = it)) }, onClose = { panel = Panel.None })
                     Panel.None -> {}
                 }
             }
@@ -184,7 +190,7 @@ fun RoomScreen(vm: AppViewModel) {
                 }
                 IconButton({ vm.like(Pick(r.url, r.title, r.thumb)) }) { Icon(Icons.Default.FavoriteBorder, "Like", tint = Color.White) }
                 IconButton({ showQueue = true }) {
-                    BadgedBox({ if (queue.isNotEmpty()) Badge(containerColor = NovaCoral) { Text("${queue.size}") } }) { Icon(Icons.Default.QueueMusic, "Up next", tint = Color.White) }
+                    BadgedBox({ if (queue.isNotEmpty()) Badge(containerColor = NovaCoral) { Text("${queue.size}") } }) { Icon(Icons.AutoMirrored.Filled.QueueMusic, "Up next", tint = Color.White) }
                 }
             }
             // chat bar
@@ -234,7 +240,15 @@ fun RoomScreen(vm: AppViewModel) {
                             }
                             if (m.mic) Icon(Icons.Default.Mic, "Speaking", tint = NovaTeal, modifier = Modifier.padding(end = 6.dp))
                             if (m.host) Icon(Icons.Default.WorkspacePremium, "Host", tint = NovaGold)
-                            else if (r.isHost) IconButton({ vm.client.kick(m.id) }) { Icon(Icons.Default.PersonRemove, "Remove", tint = SubtleText) }
+                            else if (r.isHost) Box {
+                                IconButton({ menuFor = m.id }) { Icon(Icons.Default.MoreVert, "Actions for ${m.name}", tint = SubtleText) }
+                                DropdownMenu(menuFor == m.id, { menuFor = null }) {
+                                    DropdownMenuItem({ Text("Make host") }, { vm.client.transfer(m.id); menuFor = null })
+                                    DropdownMenuItem({ Text("Mute chat 10 min") }, { vm.client.mute(m.id, 10); menuFor = null })
+                                    DropdownMenuItem({ Text("Unmute chat") }, { vm.client.mute(m.id, 0); menuFor = null })
+                                    DropdownMenuItem({ Text("Remove and block from room") }, { vm.client.kick(m.id); menuFor = null })
+                                }
+                            }
                         }
                     }
                 }
@@ -247,7 +261,16 @@ fun RoomScreen(vm: AppViewModel) {
     if (showLeave) AlertDialog(onDismissRequest = { showLeave = false }, containerColor = Color(0xFF1C1838),
         title = { Text("Leaving?", color = Color.White) },
         confirmButton = { TextButton({ showLeave = false; vm.leave() }) { Text("YES") } },
+        text = { if (r.isHost) TextButton({ showLeave = false; vm.client.closeRoom() }) { Text("End room for everyone") } },
         dismissButton = { TextButton({ showLeave = false }) { Text("NO") } })
+
+    if (r.isHost) requests.firstOrNull()?.let { q ->
+        AlertDialog(onDismissRequest = {}, containerColor = Color(0xFF1C1838),
+            title = { Text("Join request", color = Color.White) },
+            text = { Text("${q.name} (@${q.handle}) wants to join.", color = Color.White) },
+            confirmButton = { TextButton({ vm.client.approve(q.rid) }) { Text("APPROVE") } },
+            dismissButton = { TextButton({ vm.client.deny(q.rid) }) { Text("DENY") } })
+    }
 
     if (showGif) ModalBottomSheet({ showGif = false }, containerColor = Color(0xFF1C1838)) {
         var tab by remember { mutableIntStateOf(0) }
@@ -256,21 +279,23 @@ fun RoomScreen(vm: AppViewModel) {
                 Tab(tab == 0, { tab = 0 }, text = { Text("GIFs") }); Tab(tab == 1, { tab = 1 }, text = { Text("Reactions") }); Tab(tab == 2, { tab = 2 }, text = { Text("Photo") }); Tab(tab == 3, { tab = 3 }, text = { Text("Emoji") })
             }
             Spacer(Modifier.height(10.dp))
-            if (tab == 0) GifPane { vm.client.chat("gif:$it"); showGif = false }
-            else if (tab == 2) Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Share a photo with the room (kept for 24 hours)", color = SubtleText, fontSize = 13.sp)
-                Spacer(Modifier.height(12.dp))
-                PillButton("Choose photo", { photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
-            }
-            else if (tab == 3) LazyColumn(Modifier.height(260.dp)) {
-                items(EMOJI_SET.chunked(8)) { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        row.forEach { e -> Text(e, fontSize = 28.sp, modifier = Modifier.clickable { text += e }.padding(6.dp)) }
+            when (tab) {
+                0 -> GifPane { vm.client.chat("gif:$it"); showGif = false }
+                2 -> Column(Modifier.fillMaxWidth().padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Share a photo with the room (kept for 24 hours)", color = SubtleText, fontSize = 13.sp)
+                    Spacer(Modifier.height(12.dp))
+                    PillButton("Choose photo", { photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+                }
+                3 -> LazyColumn(Modifier.height(260.dp)) {
+                    items(EMOJI_SET.chunked(8)) { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            row.forEach { e -> Text(e, fontSize = 28.sp, modifier = Modifier.clickable { text += e }.padding(6.dp)) }
+                        }
                     }
                 }
-            }
-            else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 14.dp)) {
-                items(REACTIONS) { e -> Text(e, fontSize = 34.sp, modifier = Modifier.clickable { vm.client.react(e); showGif = false }) }
+                else -> LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 14.dp)) {
+                    items(REACTIONS) { e -> Text(e, fontSize = 34.sp, modifier = Modifier.clickable { vm.client.react(e); showGif = false }) }
+                }
             }
         }
     }
@@ -352,8 +377,8 @@ private fun InvitePanel(r: RoomState, link: String, shareText: String, friends: 
                 Column(Modifier.width(64.dp).clickable {
                     ctx.startActivity(Intent(Intent.ACTION_SEND).apply { type = "text/plain"; setPackage(pkg); putExtra(Intent.EXTRA_TEXT, shareText) })
                 }, horizontalAlignment = Alignment.CenterHorizontally) {
-                    val bmp = remember(pkg) { try { pm.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() } catch (e: Exception) { null } }
-                    if (bmp != null) Image(bmp, label, Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)))
+                    val bmp = remember(pkg) { try { pm.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() } catch (_: Exception) { null } }
+                    bmp?.let { Image(it, label, Modifier.size(44.dp).clip(RoundedCornerShape(10.dp))) }
                     Text(label, color = Color.White, fontSize = 10.sp, maxLines = 1)
                 }
             }
@@ -369,7 +394,9 @@ private fun InvitePanel(r: RoomState, link: String, shareText: String, friends: 
 }
 
 @Composable
-private fun SettingsPanel(r: RoomState, flags: Flags, onSettings: (String?, String?) -> Unit, onVoice: (Boolean) -> Unit, onTranslate: (Boolean) -> Unit, onClose: () -> Unit) {
+private fun SettingsPanel(r: RoomState, flags: Flags, onSettings: (String?, String?) -> Unit, onVoice: (Boolean) -> Unit, onFlags: (Boolean?, Boolean?, Boolean?, Int?) -> Unit, onPasscode: (String) -> Unit, onTranslate: (Boolean) -> Unit, onClose: () -> Unit) {
+    var pcDialog by remember { mutableStateOf(false) }
+    var pc by remember { mutableStateOf("") }
     val ctx = LocalContext.current
     val am = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val max = remember { am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }
@@ -386,8 +413,22 @@ private fun SettingsPanel(r: RoomState, flags: Flags, onSettings: (String?, Stri
         SettingRow("VOICE", if (r.settings.voice) "Microphones enabled" else "Microphones disabled") {
             IconChoice("ON", Icons.Default.Mic, r.settings.voice, r.isHost) { onVoice(true) }; IconChoice("OFF", Icons.Default.MicOff, !r.settings.voice, r.isHost) { onVoice(false) }
         }
+        SettingRow("LOCK ROOM", if (r.settings.locked) "No new people can join" else "People can join") { Switch(r.settings.locked, { onFlags(it, null, null, null) }, enabled = r.isHost) }
+        SettingRow("APPROVE JOINS", if (r.settings.approval) "You approve each person" else "People join right away") { Switch(r.settings.approval, { onFlags(null, it, null, null) }, enabled = r.isHost) }
+        SettingRow("CHAT", if (r.settings.chat) "Everyone can type" else "Only the host can type") { Switch(r.settings.chat, { onFlags(null, null, it, null) }, enabled = r.isHost) }
+        SettingRow("PASSCODE", if (r.settings.passcode) "People need a passcode to join" else "No passcode") {
+            TextButton({ pc = ""; pcDialog = true }, enabled = r.isHost) { Text(if (r.settings.passcode) "CHANGE" else "SET", color = Color.White) }
+            if (r.settings.passcode) TextButton({ onPasscode("") }, enabled = r.isHost) { Text("REMOVE", color = SubtleText) }
+        }
+        if (pcDialog) AlertDialog(onDismissRequest = { pcDialog = false }, containerColor = Color(0xFF1C1838), title = { Text("Room passcode", color = Color.White) },
+            text = { OutlinedTextField(pc, { pc = it.take(12) }, singleLine = true, label = { Text("4-12 characters") }) },
+            confirmButton = { TextButton({ onPasscode(pc); pcDialog = false }, enabled = pc.length >= 4) { Text("SAVE") } },
+            dismissButton = { TextButton({ pcDialog = false }) { Text("CANCEL") } })
+        SettingRow("MAX PEOPLE", "Room capacity") {
+            listOf(10, 25, 50, 100).forEach { n -> TextButton({ onFlags(null, null, null, n) }, enabled = r.isHost) { Text("$n", color = if (r.settings.max == n) Color.White else SubtleText) } }
+        }
         Row(Modifier.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.VolumeUp, null, tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.VolumeUp, null, tint = Color.White)
             Slider(vol, { vol = it; am.setStreamVolume(AudioManager.STREAM_MUSIC, (it * max).roundToInt(), 0) }, Modifier.weight(1f).padding(horizontal = 10.dp),
                 colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color.White))
         }
@@ -411,12 +452,14 @@ private fun SettingRow(title: String, sub: String, content: @Composable RowScope
 private fun BoxScope.FloatingEmoji(r: Reaction, onDone: () -> Unit) {
     val progress = remember { Animatable(0f) }
     val xFrac = remember { ((r.key * 37) % 70 + 15) / 100f }
+    var size by remember { mutableStateOf(IntSize.Zero) }
     LaunchedEffect(Unit) { progress.animateTo(1f, tween(2200, easing = LinearEasing)); onDone() }
-    BoxWithConstraints(Modifier.matchParentSize()) {
-        val h = constraints.maxHeight; val w = constraints.maxWidth
-        Column(Modifier.offset { IntOffset((w * xFrac).roundToInt(), (h * (0.85f - 0.7f * progress.value)).roundToInt()) }.alpha(1f - progress.value * 0.8f),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(r.emoji, fontSize = 32.sp); Text(r.from, fontSize = 10.sp, color = Color.White)
+    Box(Modifier.matchParentSize().onGloballyPositioned { size = it.size }) {
+        if (size != IntSize.Zero) {
+            Column(Modifier.offset { IntOffset((size.width * xFrac).roundToInt(), (size.height * (0.85f - 0.7f * progress.value)).roundToInt()) }.alpha(1f - progress.value * 0.8f),
+                horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(r.emoji, fontSize = 32.sp); Text(r.from, fontSize = 10.sp, color = Color.White)
+            }
         }
     }
 }
@@ -450,6 +493,9 @@ private fun ExoSynced(room: RoomState, onControl: (String, Double) -> Unit, modi
                 if (isHost && reason == Player.DISCONTINUITY_REASON_SEEK) currentOnControl("seek", new.positionMs / 1000.0)
             }
             override fun onPlaybackStateChanged(state: Int) { if (isHost && state == Player.STATE_ENDED) currentOnControl("ended", 0.0) }
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                if (isHost && loadedUrl.isNotBlank()) currentOnControl("ended", 0.0)
+            }
         }
         player.addListener(l); onDispose { player.removeListener(l) }
     }

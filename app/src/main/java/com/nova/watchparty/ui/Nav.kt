@@ -1,5 +1,10 @@
 package com.nova.watchparty.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,20 +23,26 @@ fun NovaNav(vm: AppViewModel, screen: Screen) {
         return
     }
     NovaBackground(dim = if (screen is Screen.Room) 0.45f else 0f) {
-        when (screen) {
-            Screen.Splash -> {}
-            Screen.Onboarding -> OnboardingScreen(vm)
-            Screen.SignIn -> SignInScreen(vm)
-            Screen.EmailEntry -> EmailEntryScreen(vm)
-            is Screen.EmailCode -> EmailCodeScreen(vm, screen)
-            Screen.Terms -> TermsScreen(vm)
-            Screen.Setup -> SetupScreen(vm)
-            Screen.Home -> HomeScreen(vm)
-            is Screen.Sources -> SourcesScreen(vm, screen.mode)
-            Screen.Room -> RoomScreen(vm)
-            Screen.Profile -> ProfileScreen(vm)
-            Screen.Settings -> SettingsScreen(vm)
-            Screen.Friends -> FriendsScreen(vm)
+        AnimatedContent(
+            targetState = screen,
+            transitionSpec = { fadeIn(tween(250)) togetherWith fadeOut(tween(250)) },
+            label = "screen_transition"
+        ) { targetScreen ->
+            when (targetScreen) {
+                Screen.Splash -> {}
+                Screen.Onboarding -> OnboardingScreen(vm)
+                Screen.SignIn -> SignInScreen(vm)
+                Screen.EmailEntry -> EmailEntryScreen(vm)
+                is Screen.EmailCode -> EmailCodeScreen(vm, targetScreen)
+                Screen.Terms -> TermsScreen(vm)
+                Screen.Setup -> SetupScreen(vm)
+                Screen.Home -> HomeScreen(vm)
+                is Screen.Sources -> SourcesScreen(vm, targetScreen.mode)
+                Screen.Room -> RoomScreen(vm)
+                Screen.Profile -> ProfileScreen(vm)
+                Screen.Settings -> SettingsScreen(vm)
+                Screen.Friends -> FriendsScreen(vm)
+            }
         }
     }
 }

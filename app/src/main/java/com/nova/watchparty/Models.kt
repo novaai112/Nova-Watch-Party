@@ -6,6 +6,7 @@ import org.json.JSONObject
 data class Flags(
     val quickReaction: String = "❤️", val restrictInvites: Boolean = false, val hideMature: Boolean = true,
     val floatingPlayer: Boolean = false, val autoTranslate: Boolean = false, val hideLocation: Boolean = false,
+    val hidePresence: Boolean = false, val privateActivity: Boolean = false, val notifyInvites: Boolean = true, val notifyFriends: Boolean = true,
 )
 
 data class User(
@@ -26,7 +27,16 @@ data class RoomCard(val code: String, val title: String, val thumb: String, val 
 data class Member(val id: String, val uid: String, val name: String, val handle: String, val avatar: String, val host: Boolean, val mic: Boolean = false)
 data class ChatMsg(val from: String, val uid: String, val handle: String, val avatar: String, val text: String, val ts: Long, val system: Boolean = false)
 data class QueueItem(val id: String, val url: String, val title: String, val thumb: String, val by: String, val votes: Int)
-data class RoomSettings(val privacy: String = "public", val playback: String = "vote", val voice: Boolean = true)
+data class RoomSettings(
+    val privacy: String = "public", val playback: String = "vote", val voice: Boolean = true,
+    val locked: Boolean = false, val approval: Boolean = false, val chat: Boolean = true, val max: Int = 100, val passcode: Boolean = false,
+)
+data class Presence(val online: Boolean, val lastActive: Long)
+data class ProfileStats(val joined: Long, val minutes: Int, val rooms: Int, val videos: Int, val likes: Int, val providers: Map<String, Int>)
+/** A profile as seen by the viewer: relation is self | friends | requested | incoming | none; presence is null when the user hides it. */
+data class ProfileDetail(val friend: Friend, val presence: Presence?, val relation: String, val stats: ProfileStats)
+data class VideoItem(val url: String, val title: String, val thumb: String, val views: Int)
+data class JoinRequest(val rid: String, val name: String, val handle: String, val avatar: String)
 data class SavedItem(val url: String, val title: String, val thumb: String)
 
 fun <T> JSONArray?.mapObjects(f: (JSONObject) -> T): List<T> =
@@ -38,6 +48,8 @@ fun JSONObject.toFlags(): Flags {
         quickReaction = optString("quickReaction", d.quickReaction), restrictInvites = optBoolean("restrictInvites", d.restrictInvites),
         hideMature = optBoolean("hideMature", d.hideMature), floatingPlayer = optBoolean("floatingPlayer", d.floatingPlayer),
         autoTranslate = optBoolean("autoTranslate", d.autoTranslate), hideLocation = optBoolean("hideLocation", d.hideLocation),
+        hidePresence = optBoolean("hidePresence", d.hidePresence), privateActivity = optBoolean("privateActivity", d.privateActivity),
+        notifyInvites = optBoolean("notifyInvites", d.notifyInvites), notifyFriends = optBoolean("notifyFriends", d.notifyFriends),
     )
 }
 
