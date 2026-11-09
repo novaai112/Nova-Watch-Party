@@ -210,7 +210,7 @@ private fun SavedList(kind: String, vm: AppViewModel, onPick: (Pick) -> Unit) {
     val scope = rememberCoroutineScope()
     LaunchedEffect(kind) { state = try { Load.Ok(Backend.saved(kind)) } catch (e: ApiError) { Load.Fail(e.message ?: "Failed") } }
     Results(state) { list ->
-        if (list.isEmpty()) Column(Modifier.fillMaxSize(), Alignment.CenterHorizontally, Arrangement.Center) {
+        if (list.isEmpty()) Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Default.VideocamOff, null, tint = Color.White.copy(0.8f), modifier = Modifier.size(90.dp))
             Text("No videos found", color = Color.White.copy(0.85f))
         } else LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {

@@ -1,5 +1,7 @@
 package com.nova.watchparty.ui
 
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.runtime.Composable
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -113,4 +115,56 @@ fun PillButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier,
 @Composable
 fun Spinner(modifier: Modifier = Modifier) = Box(modifier.fillMaxWidth().padding(24.dp), Alignment.Center) {
     CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
+}
+
+// ---------------------------------------------------------------- Previews
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "NovaBackground")
+@Composable
+private fun PreviewNovaBackground() {
+    NovaTheme {
+        NovaBackground {
+            NovaLogo(height = 36.dp, modifier = androidx.compose.ui.Modifier.align(Alignment.Center))
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "NovaLogo")
+@Composable
+private fun PreviewNovaLogo() {
+    NovaTheme {
+        androidx.compose.foundation.layout.Box(
+            androidx.compose.ui.Modifier.padding(24.dp),
+            Alignment.Center,
+        ) { NovaLogo(height = 40.dp) }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "PillButton")
+@Composable
+private fun PreviewPillButton() {
+    NovaTheme {
+        androidx.compose.foundation.layout.Column(
+            androidx.compose.ui.Modifier.padding(16.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+        ) {
+            PillButton("JOIN ROOM", onClick = {})
+            PillButton("DISABLED", onClick = {}, enabled = false)
+        }
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "Avatar")
+@Composable
+private fun PreviewAvatar() {
+    NovaTheme {
+        androidx.compose.foundation.layout.Row(
+            androidx.compose.ui.Modifier.padding(16.dp),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+        ) {
+            Avatar("", "Alice", 48.dp)
+            Avatar("", "Bob", 48.dp)
+            Avatar("", "Zara", 48.dp)
+        }
+    }
 }

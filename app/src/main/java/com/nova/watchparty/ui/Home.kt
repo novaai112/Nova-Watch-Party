@@ -8,6 +8,7 @@ import android.location.LocationManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.compose.foundation.background
@@ -96,7 +97,7 @@ fun HomeScreen(vm: AppViewModel) {
                 Text("Public", color = Color.White, fontSize = 16.sp)
             }
             if (vm.rooms.isEmpty()) {
-                Column(Modifier.fillMaxSize().padding(bottom = 80.dp), Alignment.CenterHorizontally, Arrangement.Center) {
+                Column(Modifier.fillMaxSize().padding(bottom = 80.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                     if (!vm.roomsLoaded) CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
                     else {
                         Icon(Icons.Default.SentimentDissatisfied, null, tint = Color.White.copy(0.8f), modifier = Modifier.size(84.dp))
@@ -152,4 +153,27 @@ private fun shareLastLocation(ctx: Context, vm: AppViewModel) {
         val loc = lm.getProviders(true).mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time }
         if (loc != null) vm.shareLocation(loc.latitude, loc.longitude)
     } catch (_: Exception) {}
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "RoomCard")
+@Composable
+private fun PreviewRoomCard() {
+    NovaTheme {
+        Box(Modifier.padding(16.dp)) {
+            RoomRow(
+                RoomCard(
+                    code = "NOVA-99",
+                    title = "Lo-Fi Beats to Relax / Study to [24/7 Live Stream]",
+                    thumb = "",
+                    count = 4,
+                    members = listOf(
+                        com.nova.watchparty.MemberLite("Alice", ""),
+                        com.nova.watchparty.MemberLite("Bob", ""),
+                        com.nova.watchparty.MemberLite("Charlie", ""),
+                    )
+                ),
+                onClick = {}
+            )
+        }
+    }
 }

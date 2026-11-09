@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.nova.watchparty.ui
 
 import android.app.Activity
@@ -32,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -339,5 +341,17 @@ fun SetupScreen(vm: AppViewModel) {
             vm.saveProfile(name.ifBlank { "Nova" }, handle, setupDone = true) { vm.reset(Screen.Home); vm.consumePendingJoin() }
         }, enabled = handle.length >= 3 && !vm.busy)
         Spacer(Modifier.height(30.dp))
+    }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF14102B, name = "OnboardingPhoneFrame")
+@Composable
+private fun PreviewOnboardingPhoneFrame() {
+    NovaTheme {
+        Box(Modifier.padding(24.dp)) {
+            PhoneFrame(Modifier.fillMaxWidth().height(300.dp)) {
+                PhoneArt(0)
+            }
+        }
     }
 }
