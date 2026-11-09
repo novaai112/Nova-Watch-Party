@@ -1,0 +1,9 @@
+{
+  "name": "nova-watch-party-server",
+  "version": "2.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test.js" },
+  "dependencies": { "ws": "^8.18.0" },
+  "optionalDependencies": { "nodemailer": "^6.9.14", "pg": "^8.12.0" },
+  "engines": { "node": ">=18" }
+}

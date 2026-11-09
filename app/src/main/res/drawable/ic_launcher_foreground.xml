@@ -1,0 +1,6 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- original Nova mark: four-point star with a play wedge -->
+    <path android:fillColor="#FF7A59" android:pathData="M54,20 C56,38 62,46 80,50 C62,54 56,62 54,80 C52,62 46,54 28,50 C46,46 52,38 54,20 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M47,40 L47,62 L67,51 Z" />
+</vector>

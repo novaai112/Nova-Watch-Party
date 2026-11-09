@@ -1,0 +1,11 @@
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class com.pierfrancescosoffritti.androidyoutubeplayer.** { *; }
+-keepclassmembers class com.nova.watchparty.ui.WebBridge { @android.webkit.JavascriptInterface <methods>; }
+-keep class org.webrtc.** { *; }
+-dontwarn org.webrtc.**
+-keep class com.google.mlkit.** { *; }
+-dontwarn com.google.mlkit.**
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**

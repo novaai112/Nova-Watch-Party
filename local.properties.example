@@ -1,0 +1,20 @@
+# Copy to local.properties and fill in (see README.md)
+sdk.dir=/path/to/Android/Sdk
+YOUTUBE_API_KEY=your_youtube_api_key_here
+TMDB_API_KEY=your_tmdb_api_key_here
+GIPHY_API_KEY=your_giphy_api_key_here
+# Your deployed server. Emulator default is ws://10.0.2.2:8080. Use wss:// in production.
+SERVER_URL=ws://10.0.2.2:8080
+# Optional: Google sign-in (Web client ID from Google Cloud Console; same value on the server)
+GOOGLE_WEB_CLIENT_ID=
+# Optional: base for invite links, e.g. https://nova.example.com  (server serves /r/CODE)
+INVITE_BASE_URL=
+# Optional: TURN server so voice works on strict networks (free tier from metered.ca, see API_KEYS_GUIDE.md)
+TURN_URL=
+TURN_USERNAME=
+TURN_CREDENTIAL=
+# Release signing (create with: keytool -genkeypair -v -keystore nova.jks -alias nova -keyalg RSA -keysize 2048 -validity 10000)
+KEYSTORE_PATH=nova.jks
+KEYSTORE_PASSWORD=
+KEY_ALIAS=nova
+KEY_PASSWORD=

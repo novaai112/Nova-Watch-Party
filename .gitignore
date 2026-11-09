@@ -1,0 +1,37 @@
+# Android
+*.iml
+.gradle/
+/local.properties
+local.properties
+/.idea/
+.idea/
+.DS_Store
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.jks
+*.keystore
+google-services.json
+app/google-services.json
+
+# Firebase / Secrets / Credentials
+*firebase-adminsdk*.json
+*service-account*.json
+*service_account*.json
+*.pem
+*.key
+
+# Server
+server/node_modules/
+server/data/
+server/.env
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS / Editor
+Thumbs.db
+*.log
