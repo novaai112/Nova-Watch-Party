@@ -17,7 +17,21 @@ jobs:
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with: { gradle-version: "8.7" }
-      - name: Build debug APK (no API keys needed to compile)
+      - name: Add Firebase config (optional secret GOOGLE_SERVICES_JSON_B64 = base64 of google-services.json)
+        env:
+          GS: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: if [ -n "$GS" ]; then echo "$GS" | base64 -d > app/google-services.json; fi
+      - name: Build debug APK
+        env:   # read by secret() in app/build.gradle.kts; all optional
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+          GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+          TURN_URL: ${{ secrets.TURN_URL }}
+          TURN_USERNAME: ${{ secrets.TURN_USERNAME }}
+          TURN_CREDENTIAL: ${{ secrets.TURN_CREDENTIAL }}
+          SERVER_URL: ${{ secrets.SERVER_URL }}
+          INVITE_BASE_URL: ${{ secrets.INVITE_BASE_URL }}
         run: gradle :app:assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with: { name: nova-debug-apk, path: app/build/outputs/apk/debug/*.apk }

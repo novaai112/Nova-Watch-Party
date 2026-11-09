@@ -255,10 +255,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     private fun hello(type: String) = JSONObject().put("type", type).put("token", Backend.token)
+    /** Pre-flight for YouTube picks: tell the user right away if the owner blocks playback outside YouTube. */
+    private suspend fun playable(p: Pick): Boolean {
+        if (!p.url.startsWith("yt:")) return true
+        val (ok, why) = Backend.ytCheck(p.url.removePrefix("yt:"))
+        if (!ok) toasts.emit(if (why == "not_found") "That video is unavailable." else "That video's owner doesn't allow it to play outside YouTube. Pick another one.")
+        return ok
+    }
     fun createRoom(p: Pick?) {
-        client.open(server, hello("create").put("url", p?.url ?: "").put("title", p?.title ?: "")
-            .put("thumb", p?.thumb ?: "").put("privacy", "public"))
-        p?.let { addHistory(it) }
+        viewModelScope.launch {
+            val usable = if (p != null && !playable(p)) null else p
+            client.open(server, hello("create").put("url", usable?.url ?: "").put("title", usable?.title ?: "")
+                .put("thumb", usable?.thumb ?: "").put("privacy", "public"))
+            usable?.let { addHistory(it) }
+        }
     }
     fun joinRoom(code: String) = client.open(server, hello("join").put("code", code.trim().uppercase()))
     fun leave() { stopVoice(); client.close() }
@@ -268,13 +278,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (user == null) pendingJoin = code else joinRoom(code)
     }
 
-    fun pick(p: Pick) { client.pick(p); addHistory(p) }
+    fun pick(p: Pick) { viewModelScope.launch { if (playable(p)) { client.pick(p); addHistory(p) } } }
+    /** Playlists: the first embeddable video plays now, the rest are queued (the server auto-skips any that fail later). */
     fun pickMany(list: List<Pick>) {
         if (list.isEmpty()) return
-        if (room.value?.isHost == true) { pick(list.first()); list.drop(1).forEach { enqueue(it) } } else list.forEach { client.pick(it) }
-        addHistory(list.first())
+        viewModelScope.launch {
+            val isHost = room.value?.isHost == true
+            val rest = list.toMutableList()
+            var tries = 0
+            while (rest.isNotEmpty() && tries < 5 && !playable(rest.first())) { rest.removeAt(0); tries++ }
+            val first = rest.firstOrNull() ?: return@launch
+            client.pick(first); addHistory(first)
+            rest.drop(1).forEach { client.pick(it, enqueue = isHost) }
+        }
     }
-    fun enqueue(p: Pick) = client.pick(p, enqueue = true)
+    fun enqueue(p: Pick) { viewModelScope.launch { if (playable(p)) client.pick(p, enqueue = true) } }
     fun addHistory(p: Pick) { viewModelScope.launch { try { Backend.addSaved("history", p) } catch (_: ApiError) {} } }
     fun like(p: Pick) {
         viewModelScope.launch {

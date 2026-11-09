@@ -21,8 +21,9 @@ android {
         applicationId = "com.nova.watchparty"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "2.0"
+        versionCode = 4
+        versionName = "2.1"
+        manifestPlaceholders["cleartext"] = "true"
         buildConfigField("String", "YOUTUBE_API_KEY", "\"${secret("YOUTUBE_API_KEY")}\"")
         buildConfigField("String", "TMDB_API_KEY", "\"${secret("TMDB_API_KEY")}\"")
         buildConfigField("String", "GIPHY_API_KEY", "\"${secret("GIPHY_API_KEY")}\"")
@@ -46,6 +47,7 @@ android {
     buildTypes {
         release {
             if (secret("KEYSTORE_PATH").isNotBlank()) signingConfig = signingConfigs.getByName("release")
+            manifestPlaceholders["cleartext"] = "false"
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -78,7 +80,6 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer-hls:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.pierfrancescosoffritti.androidyoutubeplayer:core:12.1.0")
     implementation("io.coil-kt:coil-compose:2.6.1")
     implementation("io.coil-kt:coil-gif:2.6.1")
 }

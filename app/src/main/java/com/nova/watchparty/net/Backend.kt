@@ -105,5 +105,10 @@ object Backend {
     suspend fun uploadChatImage(jpeg: ByteArray): String = call("POST", "/chat/image", jpeg.toRequestBody("image/jpeg".toMediaType())).getString("path")
     suspend fun updateExtras(channels: List<String>, socials: Map<String, String>): User =
         call("POST", "/me", jb(JSONObject().put("channels", org.json.JSONArray(channels)).put("socials", JSONObject(socials)))).toUser()
+    /** Can this YouTube video be embedded? Returns (ok, reason). Network or server trouble counts as ok so we never block playback by mistake. */
+    suspend fun ytCheck(id: String): Pair<Boolean, String> = try {
+        val o = call("GET", "/yt/check?id=" + java.net.URLEncoder.encode(id, "UTF-8"), auth = false)
+        o.optBoolean("embeddable", true) to o.optString("reason")
+    } catch (e: ApiError) { true to "" }
     suspend fun removeFriend(id: String) { call("POST", "/friends/remove", jb(JSONObject().put("id", id))) }
 }

@@ -140,6 +140,7 @@ class RoomClient {
     fun react(emoji: String) = send(JSONObject().put("type", "reaction").put("emoji", emoji))
     fun mic(on: Boolean) = send(JSONObject().put("type", "mic").put("on", on))
     fun rtc(to: String, data: JSONObject) = send(JSONObject().put("type", "rtc").put("to", to).put("data", data))
+    fun unplayable(url: String, reason: String) = send(JSONObject().put("type", "unplayable").put("url", url).put("reason", reason))
     fun kick(id: String) = send(JSONObject().put("type", "kick").put("id", id))
 
     fun close() {

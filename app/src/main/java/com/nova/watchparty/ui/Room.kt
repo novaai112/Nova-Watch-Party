@@ -72,6 +72,14 @@ private val PLAYBACK = listOf(
     Triple("vote", "LET'S VOTE", Icons.Default.HowToVote), Triple("play", "JUST PLAY", Icons.Default.PlayArrow),
     Triple("autoplay", "AUTOPLAY", Icons.Default.FastForward), Triple("leader", "LEADER'S CHOICE", Icons.Default.EmojiEvents),
 )
+private val EMOJI_SET = ("😀😃😄😁😆😅😂🤣🥲😊😇🙂😉😍🥰😘😋😛😜🤪😎🤩🥳😏😒😞😔😟😕🙁😣😖😫😩🥺😢😭😤😠😡🤬🤯😳🥵🥶😱😨😰😥😓🤗🤔🤭🤫😶😐😑😬🙄😯😦😮😲🥱😴🤤😪😵🤐🥴🤢🤮🤧😷🤒🤕🤑🤠😈👿💀👻👽🤖💩" +
+    "👍👎👏🙌🤝🙏💪👌✌️🤞🤟🤘👋🤙👀💃🕺🎉🎊🎵🎶🔥✨💯💥❤️🧡💛💚💙💜🖤🤍💔💕💖🍿🎬🎤🎧🏆🌹☕🍕🍔").let { str ->
+    val out = ArrayList<String>(); var i = 0
+    while (i < str.length) { val cp = str.codePointAt(i); var n = Character.charCount(cp)
+        while (i + n < str.length && (str[i + n] == '\uFE0F' || str[i + n] == '\u200D')) n++
+        out.add(str.substring(i, i + n)); i += n }
+    out
+}
 private val REACTIONS = listOf("😂", "😮", "❤️", "👏", "🔥", "😢", "🎉", "👍")
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -112,7 +120,7 @@ fun RoomScreen(vm: AppViewModel) {
     val player: @Composable (Modifier) -> Unit = { m ->
         Box(m.background(Color.Black)) {
             when {
-                r.url.startsWith("yt:") -> YouTubeSync(r, { a, p -> vm.client.control(a, p) }, Modifier.fillMaxSize())
+                r.url.startsWith("yt:") -> YouTubeSync(r, { a, p -> vm.client.control(a, p) }, { u, why -> vm.client.unplayable(u, why) }, Modifier.fillMaxSize())
                 r.url.startsWith("web:") -> WebSync(r, { a, p -> vm.client.control(a, p) }, Modifier.fillMaxSize())
                 r.url.isNotBlank() -> ExoSynced(r, { a, p -> vm.client.control(a, p) }, Modifier.fillMaxSize())
             }
@@ -244,7 +252,7 @@ fun RoomScreen(vm: AppViewModel) {
         var tab by remember { mutableIntStateOf(0) }
         Column(Modifier.padding(horizontal = 14.dp).padding(bottom = 24.dp)) {
             TabRow(tab, containerColor = Color.Transparent) {
-                Tab(tab == 0, { tab = 0 }, text = { Text("GIFs") }); Tab(tab == 1, { tab = 1 }, text = { Text("Reactions") }); Tab(tab == 2, { tab = 2 }, text = { Text("Photo") })
+                Tab(tab == 0, { tab = 0 }, text = { Text("GIFs") }); Tab(tab == 1, { tab = 1 }, text = { Text("Reactions") }); Tab(tab == 2, { tab = 2 }, text = { Text("Photo") }); Tab(tab == 3, { tab = 3 }, text = { Text("Emoji") })
             }
             Spacer(Modifier.height(10.dp))
             if (tab == 0) GifPane { vm.client.chat("gif:$it"); showGif = false }
@@ -252,6 +260,13 @@ fun RoomScreen(vm: AppViewModel) {
                 Text("Share a photo with the room (kept for 24 hours)", color = SubtleText, fontSize = 13.sp)
                 Spacer(Modifier.height(12.dp))
                 PillButton("Choose photo", { photoPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) })
+            }
+            else if (tab == 3) LazyColumn(Modifier.height(260.dp)) {
+                items(EMOJI_SET.chunked(8)) { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        row.forEach { e -> Text(e, fontSize = 28.sp, modifier = Modifier.clickable { text += e }.padding(6.dp)) }
+                    }
+                }
             }
             else LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(vertical = 14.dp)) {
                 items(REACTIONS) { e -> Text(e, fontSize = 34.sp, modifier = Modifier.clickable { vm.client.react(e); showGif = false }) }

@@ -7,6 +7,12 @@ Last updated at the end of build session 3 (v4). Give this file plus the whole z
 - **Android app (`app/`)**: fully written but **never compiled or run** (the build sandbox had no Kotlin/Gradle/network). Brackets were machine-checked; types, imports and library APIs were reviewed by eye only.
   **Step 1 for the next session: open in Android Studio, Gradle sync, fix compile errors, run on a device.** Likely trouble spots: WebRTC library API names (`stream-webrtc-android`), Compose/Material3 experimental opt-ins, `Icons.Default.*` names, Credential Manager (Google sign-in) usage.
 
+## Session 4 (v2.1): YouTube playback fix + reliability
+- **Fixed "An error occurred. Please try again later (Playback ID …)"** in the room player. Cause: the wrapper library (`androidyoutubeplayer 12.1.0`) loads the IFrame page without a valid HTTPS origin/Referer, which YouTube now rejects. `ui/YouTubeSync.kt` now hosts the official IFrame player itself, loaded with a proper origin (`https://<applicationId>`), automatically retries with the next origin (server https URL, then youtube.com) on error 153/5/script failure/15 s watchdog, and shows a clear message with **Open in YouTube / Retry / Skip** if the video really can't be embedded. The wrapper dependency was removed.
+- **Server**: `GET /yt/check?id=` (oEmbed embeddability pre-check, cached 30 min); WS message `unplayable {url, reason}` (host, or a majority of guests) -> room is told and the next queued video starts; a room created with a video now autoplays; `advance(room, force)`.
+- **App**: picks are pre-checked (toast if the owner blocks embedding), playlist import queues the first playable video then the rest; chat sheet has an **Emoji** picker tab; cleartext traffic only in debug builds (release forces wss/https); version 2.1.
+- Tests added to `server/test.js` (unplayable skip, autoplay on create, `/yt/check` validation). **Not run here (no network for `npm install`)**: run `cd server && npm install && npm test`.
+
 ## Done
 | Area | Details |
 |---|---|

@@ -16,7 +16,7 @@
         <intent><action android:name="android.intent.action.SEND" /><data android:mimeType="text/plain" /></intent>
     </queries>
 
-    <!-- usesCleartextTraffic is for local dev (ws:// and http://). Use wss:// + https:// in production and remove it. -->
+    <!-- cleartext (ws:// http://) is allowed in debug builds only; release builds force wss:// + https:// (see app/build.gradle.kts) -->
     <application
         android:name=".NovaApp"
         android:allowBackup="false"
@@ -24,7 +24,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true"
+        android:usesCleartextTraffic="${cleartext}"
         android:theme="@style/Theme.Nova">
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="nova_invites" />
         <service android:name=".NovaMessagingService" android:exported="false">

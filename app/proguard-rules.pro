@@ -1,6 +1,6 @@
 -dontwarn okhttp3.**
 -dontwarn okio.**
--keep class com.pierfrancescosoffritti.androidyoutubeplayer.** { *; }
+-keepclassmembers class com.nova.watchparty.ui.YtBridge { @android.webkit.JavascriptInterface <methods>; }
 -keepclassmembers class com.nova.watchparty.ui.WebBridge { @android.webkit.JavascriptInterface <methods>; }
 -keep class org.webrtc.** { *; }
 -dontwarn org.webrtc.**

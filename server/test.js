@@ -85,5 +85,14 @@ const wait = (ms) => new Promise(r => setTimeout(r, ms));
   const gId = (await api('/me', {}, g.token)).j.id;
   r = await fetch(B + '/admin/ban', { method: 'POST', headers: { 'x-admin-token': 'adm' }, body: JSON.stringify({ id: gId }) }); assert.equal(r.status, 200);
   assert.equal((await api('/me', {}, g.token)).s, 401);
+  // unplayable video: host reports -> room is told, next queued video starts
+  const h = await signup('h@x.com'); const hh = await open(h.token); hh.send({ type: 'create', url: 'yt:BAD00000000', title: 'Bad', privacy: 'public' }); await wait(200);
+  assert.equal(hh.msgs[0].state.playing, true, 'new room with a video autoplays');
+  hh.send({ type: 'settings', playback: 'leader' }); hh.send({ type: 'pick', url: 'yt:GOOD0000000', title: 'Good', enqueue: true }); await wait(200);
+  hh.send({ type: 'unplayable', url: 'yt:BAD00000000', reason: '101' }); await wait(250);
+  assert(hh.msgs.some(m => m.type === 'system' && /cannot be played/.test(m.text)), 'unplayable notice');
+  assert(hh.msgs.some(m => m.type === 'state' && m.url === 'yt:GOOD0000000' && m.playing), 'skipped to next queued video');
+  // oEmbed check validates ids
+  assert.equal((await api('/yt/check?id=nope')).s, 400);
   console.log('ALL SERVER TESTS PASSED'); process.exit(0);
 })().catch(e => { console.error('FAIL', e); process.exit(1); });

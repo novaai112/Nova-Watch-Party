@@ -151,16 +151,19 @@ function roomSummary(r) {
 function loadVideo(r, url, title, thumb) {
   const s = r.state; s.url = clean(url, 2000); s.title = clean(title, 200); s.thumb = clean(thumb, 500);
   s.position = 0; s.playing = true; s.updatedAt = Date.now();
+  r.unplayable = null; r.unplayableHandled = null;
   broadcast(r, stateMsg(r));
 }
-function advance(r) {
-  if (!r.queue.length) return;
+// force = skip a broken video: take the next queued item whatever the playback mode is
+function advance(r, force = false) {
+  if (!r.queue.length) return false;
   let idx = 0;
-  if (r.playback === 'vote') { let best = -1; r.queue.forEach((q, i) => { if (q.votes.size > best) { best = q.votes.size; idx = i; } }); }
-  else if (r.playback !== 'autoplay') return;
+  if (r.playback === 'vote' || force) { let best = -1; r.queue.forEach((q, i) => { if (q.votes.size > best) { best = q.votes.size; idx = i; } }); }
+  else if (r.playback !== 'autoplay') return false;
   const [q] = r.queue.splice(idx, 1);
   loadVideo(r, q.url, q.title, q.thumb);
   broadcast(r, { type: 'queue', queue: queueOf(r) });
+  return true;
 }
 
 /* ---------- HTTP ---------- */
@@ -172,6 +175,7 @@ function readBody(req, max) {
     req.on('error', rej);
   });
 }
+const ytCache = new Map();
 const json = (res, code, o) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }); res.end(JSON.stringify(o)); };
 
 const server = http.createServer(async (req, res) => {
@@ -198,6 +202,20 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'public, max-age=3600' }); return fs.createReadStream(f).pipe(res);
     }
     if (limited(ip, 120)) return json(res, 429, { error: 'Too many requests' });
+    if (p === '/yt/check' && req.method === 'GET') { // can this YouTube video be embedded? (oEmbed answers 401 when the owner disabled embedding)
+      const id = url.searchParams.get('id') || '';
+      if (!/^[\w-]{11}$/.test(id)) return json(res, 400, { error: 'Bad video id' });
+      const hit = ytCache.get(id); if (hit && Date.now() - hit.at < 30 * 60000) return json(res, 200, hit.v);
+      let v = { embeddable: true, unknown: true };
+      try {
+        const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id), { signal: AbortSignal.timeout(4000) });
+        if (r.status === 200) { const o = await r.json(); v = { embeddable: true, title: String(o.title || '').slice(0, 200) }; }
+        else if (r.status === 401 || r.status === 403) v = { embeddable: false, reason: 'embed_disabled' };
+        else if (r.status === 404) v = { embeddable: false, reason: 'not_found' };
+      } catch {}
+      if (!v.unknown) { if (ytCache.size > 2000) ytCache.clear(); ytCache.set(id, { at: Date.now(), v }); }
+      return json(res, 200, v);
+    }
 
     // ----- auth (no token needed)
     if (p === '/auth/email' && req.method === 'POST') {
@@ -445,7 +463,7 @@ wss.on('connection', (ws, req) => {
         const code = newCode();
         const r = { code, hostId: null, ownerId: u.id, members: new Map(), privacy: PRIVACY.includes(m.privacy) ? m.privacy : 'public',
           playback: 'vote', voice: true, queue: [], geo: u.flags.hideLocation ? null : { lat: u.lat, lon: u.lon },
-          state: { url: clean(m.url, 2000), title: clean(m.title, 200), thumb: clean(m.thumb, 500), playing: false, position: 0, updatedAt: Date.now() } };
+          state: { url: clean(m.url, 2000), title: clean(m.title, 200), thumb: clean(m.thumb, 500), playing: !!clean(m.url, 2000), position: 0, updatedAt: Date.now() } };
         rooms.set(code, r); return enter(r);
       }
       if (m.type === 'join') {
@@ -466,7 +484,18 @@ wss.on('connection', (ws, req) => {
       else if (m.action !== 'seek') return;
       s.position = pos; s.updatedAt = Date.now(); return broadcast(room, stateMsg(room), me.id);
     }
-    if (m.type === 'ended' && isLeader()) return advance(room);
+    if (m.type === 'ended' && isLeader()) return void advance(room);
+    if (m.type === 'unplayable') { // a client could not play the current video (embedding disabled, removed, blocked on device)
+      const u = clean(m.url, 2000);
+      if (!u || room.state.url !== u || room.unplayableHandled === u) return;
+      room.unplayable = room.unplayable || new Set(); room.unplayable.add(me.id);
+      if (!isLeader() && room.unplayable.size * 2 <= room.members.size) return; // guests: need a majority
+      room.unplayableHandled = u; room.state.playing = false; room.state.updatedAt = Date.now();
+      const why = { 100: 'was removed or is private', 101: 'cannot be played outside YouTube', 150: 'cannot be played outside YouTube' }[String(m.reason)] || 'could not be played';
+      broadcast(room, { type: 'system', text: `This video ${why}.` + (room.queue.length ? ' Playing the next one…' : ' Pick another video.') });
+      if (room.queue.length) advance(room, true); else broadcast(room, stateMsg(room));
+      return;
+    }
     if (m.type === 'pick') { // someone suggests a video
       const q = { id: rid(4), url: clean(m.url, 2000), title: clean(m.title, 200), thumb: clean(m.thumb, 500), by: user.name, votes: new Set() };
       if (!q.url) return;
